@@ -1,0 +1,1285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Campus Attendance &amp; Food Provision QR System</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Lora:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<style>
+:root{
+  --navy:#0B2545;
+  --blue:#0038A8;
+  --gold:#FCD116;
+  --red:#CE1126;
+  --paper:#FBFAF7;
+  --line:#C9CDD3;
+  --ink:#1B1F27;
+  --muted:#5B6472;
+  --ok:#1E7A3D;
+}
+*{box-sizing:border-box;}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:'IBM Plex Sans',sans-serif;font-size:14px;line-height:1.5;}
+h1,h2,h3{font-family:'Lora',serif;margin:0;}
+header.app{background:var(--navy);color:#fff;padding:18px 20px 14px;border-bottom:5px solid var(--gold);}
+header.app .eyebrow{font-size:11px;letter-spacing:.04em;color:#B9C4DC;margin-bottom:4px;}
+header.app h1{font-size:19px;font-weight:600;color:#fff;}
+header.app .inst{font-size:12.5px;color:#D8DEEC;margin-top:2px;}
+
+nav.tabs{display:flex;flex-wrap:wrap;background:#fff;border-bottom:1px solid var(--line);position:sticky;top:0;z-index:20;}
+nav.tabs button{flex:1 1 auto;min-width:90px;border:none;background:none;padding:11px 6px;font-family:'IBM Plex Sans',sans-serif;font-size:12.5px;font-weight:500;color:var(--muted);cursor:pointer;border-bottom:3px solid transparent;}
+nav.tabs button.active{color:var(--navy);border-bottom-color:var(--blue);background:#F1F4FA;}
+
+main{max-width:960px;margin:0 auto;padding:16px;}
+.screen{display:none;}
+.screen.active{display:block;}
+
+.card{background:#fff;border:1px solid var(--line);border-radius:3px;padding:16px;margin-bottom:14px;}
+.card h2{font-size:15px;color:var(--navy);margin-bottom:10px;}
+.card h2 small{display:block;font-family:'IBM Plex Sans',sans-serif;font-weight:400;font-size:11.5px;color:var(--muted);margin-top:2px;}
+
+label{display:block;font-size:12px;font-weight:500;color:var(--navy);margin:10px 0 4px;}
+input[type=text],input[type=date],textarea,select{
+  width:100%;border:1px solid var(--line);border-radius:3px;padding:8px 9px;font-family:inherit;font-size:13.5px;background:#fff;color:var(--ink);
+}
+textarea{min-height:130px;resize:vertical;font-family:'IBM Plex Sans',monospace;}
+.hint{font-size:11.5px;color:var(--muted);margin-top:3px;}
+.hint code{background:#F1F4FA;padding:1px 4px;border-radius:2px;}
+
+.btn{display:inline-block;border:none;border-radius:3px;padding:10px 16px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;}
+.btn-sm{padding:6px 10px;font-size:12px;}
+.btn-primary{background:var(--navy);color:#fff;}
+.btn-primary:hover{background:#123061;}
+.btn-gold{background:var(--gold);color:var(--navy);}
+.btn-gold:hover{background:#e6bd0e;}
+.btn-outline{background:#fff;color:var(--navy);border:1px solid var(--navy);}
+.btn-outline:hover{background:#F1F4FA;}
+.btn-danger{background:#fff;color:var(--red);border:1px solid var(--red);}
+.btn-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;}
+
+.event-strip{display:flex;flex-wrap:wrap;align-items:center;gap:14px;font-size:12.5px;color:var(--navy);background:#F1F4FA;border:1px solid var(--line);border-radius:3px;padding:10px 12px;margin-bottom:14px;}
+.event-strip b{color:var(--ink);}
+.event-strip .switcher{display:flex;align-items:center;gap:6px;margin-left:auto;}
+.event-strip .switcher select{width:auto;min-width:180px;padding:5px 7px;font-size:12px;}
+.event-id{font-family:monospace;color:var(--muted);font-size:11px;}
+
+.event-list{border:1px solid var(--line);border-radius:3px;overflow:hidden;}
+.event-row{display:flex;align-items:center;gap:10px;padding:9px 10px;border-bottom:1px solid var(--line);font-size:12.5px;}
+.event-row:last-child{border-bottom:none;}
+.event-row.is-active{background:#F1F4FA;}
+.event-row .meta{flex:1;}
+.event-row .meta .t{font-weight:600;color:var(--navy);}
+.event-row .meta .s{color:var(--muted);font-size:11.5px;}
+.event-row .tag{font-size:10px;font-weight:700;color:#fff;background:var(--ok);border-radius:3px;padding:2px 6px;}
+
+.roster-list{border:1px solid var(--line);border-radius:3px;max-height:220px;overflow-y:auto;}
+.roster-row{display:flex;align-items:center;gap:8px;padding:7px 10px;border-bottom:1px solid var(--line);font-size:12px;}
+.roster-row:last-child{border-bottom:none;}
+.roster-row .rn{flex:1;font-weight:500;}
+.roster-row .ri{font-family:monospace;color:var(--muted);font-size:10.5px;}
+
+.qr-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;}
+.qr-card{border:1px solid var(--line);border-radius:3px;padding:10px;text-align:center;background:#fff;}
+.qr-card .qrbox{display:flex;justify-content:center;margin-bottom:6px;}
+.qr-card .pname{font-size:11.5px;font-weight:600;color:var(--navy);line-height:1.25;}
+.qr-card .psub{font-size:10px;color:var(--muted);margin-top:1px;}
+.qr-card .pid{font-size:10px;color:var(--muted);margin-top:2px;font-family:monospace;}
+.qr-card .qr-dl{margin-top:6px;font-size:10.5px;color:var(--blue);background:none;border:1px solid var(--blue);border-radius:3px;padding:3px 8px;cursor:pointer;}
+
+.pill-picker{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;}
+.pill-picker button{flex:1 1 auto;min-width:80px;border:1px solid var(--navy);background:#fff;color:var(--navy);padding:8px 4px;border-radius:3px;font-size:12px;font-weight:600;cursor:pointer;}
+.pill-picker button.active{background:var(--navy);color:#fff;}
+.sheet-picker button{border-color:var(--blue);}
+.sheet-picker button.active{background:var(--blue);}
+
+.cam-wrap{position:relative;background:#000;border-radius:4px;overflow:hidden;max-width:420px;margin:0 auto;}
+.cam-wrap video{width:100%;display:block;}
+.scan-frame{position:absolute;inset:15% 25%;border:3px solid var(--gold);border-radius:6px;pointer-events:none;}
+#camStatus{text-align:center;font-size:12px;color:var(--muted);margin-top:8px;}
+#scanFlash{margin-top:10px;padding:10px 12px;border-radius:3px;font-size:13px;font-weight:600;display:none;}
+#scanFlash.ok{display:block;background:#E7F5EC;color:var(--ok);border:1px solid #BFE3CB;}
+#scanFlash.warn{display:block;background:#FFF6E0;color:#8A6100;border:1px solid #F2DE9E;}
+#scanFlash.err{display:block;background:#FBEAEA;color:var(--red);border:1px solid #F1C2C2;}
+.recent-list{margin-top:10px;font-size:12px;}
+.recent-list li{padding:5px 0;border-bottom:1px solid var(--line);color:var(--muted);}
+.recent-list li b{color:var(--ink);}
+
+table.rec{border-collapse:collapse;width:100%;font-size:12px;}
+table.rec th,table.rec td{border:1px solid var(--line);padding:6px 7px;text-align:center;}
+table.rec th{background:var(--navy);color:#fff;font-weight:600;font-size:11px;}
+table.rec td.name{text-align:left;font-weight:500;white-space:nowrap;}
+table.rec td.cell{cursor:pointer;min-width:70px;color:var(--muted);}
+table.rec td.cell.present{background:#E7F5EC;color:var(--ok);font-weight:600;}
+table.rec td.cell:hover{outline:1px solid var(--blue);outline-offset:-1px;}
+table.rec td.static{color:var(--muted);font-style:italic;font-size:11px;}
+.sig-thumb{max-width:64px;max-height:24px;display:block;margin:0 auto;}
+.table-scroll{overflow-x:auto;}
+.search-row{margin-bottom:10px;}
+
+.export-note{background:#F1F4FA;border:1px solid var(--line);border-radius:3px;padding:10px 12px;font-size:12px;color:var(--navy);margin-bottom:12px;}
+.sub{font-size:11.5px;color:var(--muted);margin:-4px 0 12px;}
+
+.modal-overlay{position:fixed;inset:0;background:rgba(11,37,69,0.6);display:none;align-items:center;justify-content:center;z-index:200;padding:16px;}
+.modal-overlay.open{display:flex;}
+.modal-card{background:#fff;border-radius:6px;padding:16px;max-width:360px;width:100%;text-align:center;}
+.modal-title{font-family:'Lora',serif;font-weight:600;color:var(--navy);font-size:15px;}
+.modal-sub{font-size:12px;color:var(--muted);margin:2px 0 10px;}
+#sigCanvas{border:1px solid var(--line);border-radius:4px;background:#fff;touch-action:none;width:100%;max-width:320px;height:150px;}
+
+@media print{
+  header.app, nav.tabs, .no-print{display:none !important;}
+  main{max-width:100%;padding:0;}
+  .screen{display:none !important;}
+  .screen.print-active{display:block !important;}
+  .card{border:none;padding:0;}
+}
+</style>
+</head>
+<body>
+
+<header class="app">
+  <div class="eyebrow">Office of the Human Resource Management</div>
+  <h1>Campus Attendance &amp; Food Provision QR System</h1>
+  <div class="inst" id="instLine">Bohol Island State University</div>
+</header>
+
+<nav class="tabs">
+  <button data-tab="setup" class="active">1. Setup</button>
+  <button data-tab="idcards">2. QR / ID Cards</button>
+  <button data-tab="scan">3. Scan Station</button>
+  <button data-tab="records">4. Records</button>
+  <button data-tab="export">5. Export (COA)</button>
+</nav>
+
+<main>
+
+<div id="eventStripHolder"></div>
+
+<!-- SETUP -->
+<div class="screen active" id="screen-setup">
+
+  <div class="card">
+    <h2>People Roster<small>Everyone the system has ever seen, campus-wide. Each person keeps the <b>same QR code forever</b> — it just gets reused whenever their name appears in a new event's list below.</small></h2>
+    <div class="search-row">
+      <input type="text" id="rosterSearch" placeholder="Search the roster...">
+    </div>
+    <div class="roster-list" id="rosterList"></div>
+  </div>
+
+  <div class="card">
+    <h2>Your Events<small>Every activity you create stays saved here. Switch anytime.</small></h2>
+    <div class="event-list" id="eventList"></div>
+  </div>
+
+  <div class="card">
+    <h2>Create a New Event<small>Reuses people already in the roster (matched by name) so their QR stays the same; adds anyone new.</small></h2>
+    <label for="instName">Institution name</label>
+    <input type="text" id="instName" value="Bohol Island State University">
+    <label for="actName">Activity</label>
+    <input type="text" id="actName" placeholder="e.g. Family Day 2026, Mental Health Awareness Activity">
+    <label for="actDate">Date</label>
+    <input type="date" id="actDate">
+    <label for="actVenue">Venue</label>
+    <input type="text" id="actVenue" placeholder="e.g. BISU Main Campus Grounds">
+    <label for="pList">Participant list (one person per line)</label>
+    <textarea id="pList" placeholder="MACALOLOT, MARIETTA C.
+Ramos, Beverly | F | University Guidance Counselor | Main Campus | 09171234567 | beverly.ramos@bisu.edu.ph
+Rillo, Ricky Clientrio | M | Guidance Counselor | Main Campus"></textarea>
+    <div class="hint">Just the name is enough. To also fill in the <b>Activity Attendance</b> sheet (Sex, Position/Designation, Campus/Agency, Contact No., Email), add them after the name separated by <code>|</code>, in that order. If a name already matches someone in the roster, their existing QR and details are reused — spell names the same way across events so they match.</div>
+    <div class="btn-row">
+      <button class="btn btn-primary" id="btnCreateEvent">Create event &amp; assign QR codes</button>
+    </div>
+    <div class="hint" id="setupMsg"></div>
+  </div>
+</div>
+
+<!-- ID CARDS -->
+<div class="screen" id="screen-idcards">
+  <div class="card no-print">
+    <h2>Printable QR / ID Cards<small>One permanent QR per person — the same code works at every future activity too.</small></h2>
+    <div class="hint">Print and hand these out, <b>or</b> download the images below and send them ahead of time by email, Messenger, or SMS — participants just pull up the image on their phone and staff scans it the same way.</div>
+    <div class="btn-row">
+      <button class="btn btn-gold" id="btnPrintCards">Print ID cards</button>
+      <button class="btn btn-outline" id="btnDownloadAllQr">Download all QR codes (.zip)</button>
+    </div>
+  </div>
+  <div class="card" id="screen-idcards-print">
+    <div class="qr-grid" id="qrGrid"></div>
+  </div>
+</div>
+
+<!-- SCAN -->
+<div class="screen" id="screen-scan">
+  <div class="card">
+    <h2>Scan Station<small>Choose which sheet you're recording, then scan each participant's QR code. They'll be asked to sign on this device to confirm.</small></h2>
+
+    <div class="pill-picker sheet-picker" id="scanSheetPicker"></div>
+    <div id="mealPickerWrap">
+      <div class="pill-picker" id="mealPicker"></div>
+    </div>
+
+    <div class="cam-wrap" id="camWrap">
+      <video id="video" playsinline muted></video>
+      <div class="scan-frame"></div>
+    </div>
+    <canvas id="canvas" style="display:none;"></canvas>
+    <div id="camStatus">Camera is off.</div>
+    <div class="btn-row" style="justify-content:center;">
+      <button class="btn btn-primary" id="btnCamStart">Start camera</button>
+      <button class="btn btn-outline" id="btnCamStop" style="display:none;">Stop camera</button>
+    </div>
+    <div id="scanFlash"></div>
+    <ul class="recent-list" id="recentList"></ul>
+    <div class="hint">Someone's QR was issued at another activity and they're not on this event's list yet? Scanning it here adds them automatically. Camera not working on this device? Use the Records tab to check people in manually instead.</div>
+  </div>
+</div>
+
+<!-- RECORDS -->
+<div class="screen" id="screen-records">
+  <div class="card">
+    <h2>Attendance Record<small>Tap an empty cell to sign someone in; tap a signed cell to undo. Switch sheets below.</small></h2>
+    <div class="pill-picker sheet-picker" id="recordsSheetPicker"></div>
+    <div class="search-row">
+      <input type="text" id="recSearch" placeholder="Search a name...">
+    </div>
+    <div class="table-scroll">
+      <table class="rec" id="recTable"></table>
+    </div>
+  </div>
+</div>
+
+<!-- EXPORT -->
+<div class="screen" id="screen-export">
+  <div class="card">
+    <h2>Activity Attendance — Download<small>Name, Sex, Position/Designation, Campus/Agency, Contact No., Email, Time In, and the captured e-signature.</small></h2>
+    <div class="btn-row">
+      <button class="btn btn-primary" id="btnExportActivityXlsx">Download Excel (.xlsx)</button>
+      <button class="btn btn-primary" id="btnExportActivityPdf">Download PDF</button>
+    </div>
+  </div>
+  <div class="card">
+    <h2>Food Provision — Download<small>Breakfast / AM Snacks / Lunch / PM Snacks / Dinner grid, with each mark showing the participant's e-signature.</small></h2>
+    <div class="export-note">Both downloads include a Prepared by / Checked by / Approved by signature block and a separate Audit Log sheet with an exact timestamp for every check-in — useful if COA asks how a mark was recorded.</div>
+    <div class="btn-row">
+      <button class="btn btn-primary" id="btnExportXlsx">Download Excel (.xlsx)</button>
+      <button class="btn btn-primary" id="btnExportPdf">Download PDF</button>
+    </div>
+  </div>
+</div>
+
+</main>
+
+<!-- SIGNATURE MODAL -->
+<div class="modal-overlay" id="sigOverlay">
+  <div class="modal-card">
+    <div class="modal-title" id="sigTitle">Sign to confirm</div>
+    <div class="modal-sub" id="sigSub"></div>
+    <canvas id="sigCanvas" width="320" height="150"></canvas>
+    <div class="btn-row" style="justify-content:center;">
+      <button class="btn btn-outline btn-sm" id="sigClear">Clear</button>
+      <button class="btn btn-danger btn-sm" id="sigCancel">Cancel</button>
+      <button class="btn btn-primary btn-sm" id="sigConfirm">Confirm signature</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const MEALS = [
+  {key:'breakfast', label:'Breakfast'},
+  {key:'amsnacks',  label:'AM Snacks'},
+  {key:'lunch',     label:'Lunch'},
+  {key:'pmsnacks',  label:'PM Snacks'},
+  {key:'dinner',    label:'Dinner'}
+];
+
+// Global, campus-wide roster: a person keeps the same id (and therefore the same QR) forever.
+let PEOPLE_STORE = {};    // { [personId]: {id, name, sex, position, campus, contact, email} }
+
+// Multi-event stores, keyed by event id
+let EVENTS_STORE = {};    // { [eventId]: {id, institution, activity, date, venue, participantIds:[personId,...]} }
+let ATTEND_STORE = {};    // food provision: { [eventId]: { personId: { mealkey: {time, sig} } } }
+let ACTIVITY_STORE = {};  // activity attendance: { [eventId]: { personId: {time, sig} } }
+let AUDIT_STORE = {};     // { [eventId]: [{time,pid,name,meal,action,method,type}] }
+let ACTIVE_ID = null;
+
+let EVENT = null;
+let ATTEND = {};
+let ACTIVITY = {};
+let AUDIT = [];
+
+let activeMeal = MEALS[0].key;
+let scanSheet = 'food';
+let recordsSheet = 'food';
+let camStream = null;
+let scanLoopId = null;
+let lastScan = {code:null, at:0};
+let isSigning = false;
+
+// ---------- storage helpers ----------
+async function savePeopleStore(){ try{ await window.storage.set('people-store', JSON.stringify(PEOPLE_STORE), true); }catch(e){ console.error(e); } }
+async function saveEventsStore(){ try{ await window.storage.set('events-store', JSON.stringify(EVENTS_STORE), true); }catch(e){ console.error(e); } }
+async function saveAttendStore(){ try{ await window.storage.set('attendance-store', JSON.stringify(ATTEND_STORE), true); }catch(e){ console.error(e); } }
+async function saveActivityStore(){ try{ await window.storage.set('activity-store', JSON.stringify(ACTIVITY_STORE), true); }catch(e){ console.error(e); } }
+async function saveAuditStore(){ try{ await window.storage.set('audit-store', JSON.stringify(AUDIT_STORE), true); }catch(e){ console.error(e); } }
+async function saveActiveId(){ try{ await window.storage.set('active-event-id', ACTIVE_ID || '', true); }catch(e){ console.error(e); } }
+
+async function loadAll(){
+  try{ const r = await window.storage.get('people-store', true); PEOPLE_STORE = r ? JSON.parse(r.value) : {}; }catch(e){ PEOPLE_STORE = {}; }
+  try{ const r = await window.storage.get('events-store', true); EVENTS_STORE = r ? JSON.parse(r.value) : {}; }catch(e){ EVENTS_STORE = {}; }
+  try{ const r = await window.storage.get('attendance-store', true); ATTEND_STORE = r ? JSON.parse(r.value) : {}; }catch(e){ ATTEND_STORE = {}; }
+  try{ const r = await window.storage.get('activity-store', true); ACTIVITY_STORE = r ? JSON.parse(r.value) : {}; }catch(e){ ACTIVITY_STORE = {}; }
+  try{ const r = await window.storage.get('audit-store', true); AUDIT_STORE = r ? JSON.parse(r.value) : {}; }catch(e){ AUDIT_STORE = {}; }
+  try{ const r = await window.storage.get('active-event-id', true); ACTIVE_ID = r ? (r.value || null) : null; }catch(e){ ACTIVE_ID = null; }
+
+  if(!ACTIVE_ID || !EVENTS_STORE[ACTIVE_ID]){
+    const ids = Object.keys(EVENTS_STORE);
+    ACTIVE_ID = ids.length ? ids[ids.length-1] : null;
+  }
+  syncActivePointers();
+  renderAll();
+}
+
+function syncActivePointers(){
+  EVENT = ACTIVE_ID ? EVENTS_STORE[ACTIVE_ID] : null;
+  ATTEND = (ACTIVE_ID && ATTEND_STORE[ACTIVE_ID]) ? ATTEND_STORE[ACTIVE_ID] : {};
+  ACTIVITY = (ACTIVE_ID && ACTIVITY_STORE[ACTIVE_ID]) ? ACTIVITY_STORE[ACTIVE_ID] : {};
+  AUDIT = (ACTIVE_ID && AUDIT_STORE[ACTIVE_ID]) ? AUDIT_STORE[ACTIVE_ID] : [];
+  if(ACTIVE_ID){
+    ATTEND_STORE[ACTIVE_ID] = ATTEND;
+    ACTIVITY_STORE[ACTIVE_ID] = ACTIVITY;
+    AUDIT_STORE[ACTIVE_ID] = AUDIT;
+  }
+}
+
+// people currently enrolled in the active event, resolved from the global roster
+function eventPeople(){
+  if(!EVENT) return [];
+  return EVENT.participantIds.map(id=> PEOPLE_STORE[id]).filter(Boolean);
+}
+
+// ---------- tabs ----------
+document.querySelectorAll('nav.tabs button').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('nav.tabs button').forEach(b=>b.classList.remove('active'));
+    document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('screen-'+btn.dataset.tab).classList.add('active');
+    if(btn.dataset.tab==='scan') stopCamera();
+  });
+});
+
+// ---------- signature pad modal ----------
+const sigOverlay = document.getElementById('sigOverlay');
+const sigCanvas = document.getElementById('sigCanvas');
+const sigCtx = sigCanvas.getContext('2d');
+let sigDrawing = false, sigHasInk = false, sigResolver = null;
+
+function sigPos(evt){
+  const rect = sigCanvas.getBoundingClientRect();
+  const scaleX = sigCanvas.width/rect.width;
+  const scaleY = sigCanvas.height/rect.height;
+  const clientX = evt.touches ? evt.touches[0].clientX : evt.clientX;
+  const clientY = evt.touches ? evt.touches[0].clientY : evt.clientY;
+  return { x:(clientX-rect.left)*scaleX, y:(clientY-rect.top)*scaleY };
+}
+function sigStart(evt){ evt.preventDefault(); sigDrawing = true; const p = sigPos(evt); sigCtx.beginPath(); sigCtx.moveTo(p.x, p.y); }
+function sigMove(evt){
+  if(!sigDrawing) return;
+  evt.preventDefault();
+  const p = sigPos(evt);
+  sigCtx.strokeStyle = '#0B2545'; sigCtx.lineWidth = 2.2; sigCtx.lineCap = 'round'; sigCtx.lineJoin='round';
+  sigCtx.lineTo(p.x, p.y); sigCtx.stroke();
+  sigHasInk = true;
+}
+function sigEnd(){ sigDrawing = false; }
+sigCanvas.addEventListener('mousedown', sigStart);
+sigCanvas.addEventListener('mousemove', sigMove);
+window.addEventListener('mouseup', sigEnd);
+sigCanvas.addEventListener('touchstart', sigStart, {passive:false});
+sigCanvas.addEventListener('touchmove', sigMove, {passive:false});
+sigCanvas.addEventListener('touchend', sigEnd);
+
+function clearSigCanvas(){
+  sigCtx.clearRect(0,0,sigCanvas.width,sigCanvas.height);
+  sigCtx.fillStyle = '#ffffff';
+  sigCtx.fillRect(0,0,sigCanvas.width,sigCanvas.height);
+  sigHasInk = false;
+}
+
+document.getElementById('sigClear').addEventListener('click', clearSigCanvas);
+document.getElementById('sigCancel').addEventListener('click', ()=> closeSigModal(null));
+document.getElementById('sigConfirm').addEventListener('click', ()=>{
+  if(!sigHasInk){ alert('Please sign in the box before confirming.'); return; }
+  closeSigModal(sigCanvas.toDataURL('image/png'));
+});
+
+function openSigModal(name, sub){
+  document.getElementById('sigTitle').textContent = name;
+  document.getElementById('sigSub').textContent = sub;
+  clearSigCanvas();
+  sigOverlay.classList.add('open');
+  return new Promise(resolve=>{ sigResolver = resolve; });
+}
+function closeSigModal(result){
+  sigOverlay.classList.remove('open');
+  if(sigResolver){ sigResolver(result); sigResolver = null; }
+}
+
+// ---------- roster: find-or-create by name so people keep one QR forever ----------
+function uid(){ return Math.random().toString(36).slice(2,8); }
+
+function normName(s){ return String(s||'').trim().replace(/\s+/g,' ').toUpperCase(); }
+
+function findPersonByName(name){
+  const key = normName(name);
+  if(!key) return null;
+  return Object.values(PEOPLE_STORE).find(p=> normName(p.name)===key) || null;
+}
+
+function findOrCreatePerson(fields){
+  const existing = findPersonByName(fields.name);
+  if(existing){
+    ['sex','position','campus','contact','email'].forEach(k=>{
+      if(fields[k] && !existing[k]) existing[k] = fields[k];
+    });
+    PEOPLE_STORE[existing.id] = existing;
+    return existing.id;
+  }
+  const id = 'P'+Date.now().toString(36).toUpperCase()+uid();
+  const person = { id, name:fields.name, sex:fields.sex||'', position:fields.position||'', campus:fields.campus||'', contact:fields.contact||'', email:fields.email||'' };
+  PEOPLE_STORE[id] = person;
+  return id;
+}
+
+function parseParticipantLine(line){
+  const parts = line.split('|').map(s=>s.trim());
+  const [name, sex='', position='', campus='', contact='', email=''] = parts;
+  return { name, sex, position, campus, contact, email };
+}
+
+// a scanned/tapped person who isn't yet on this event's list gets added automatically
+async function ensureEnrolled(pid){
+  const person = PEOPLE_STORE[pid];
+  if(!person || !EVENT) return null;
+  if(!EVENT.participantIds.includes(pid)){
+    EVENT.participantIds.push(pid);
+    EVENTS_STORE[EVENT.id] = EVENT;
+    await saveEventsStore();
+    renderEventStrip();
+    renderEventList();
+  }
+  return person;
+}
+
+// ---------- setup: create event ----------
+document.getElementById('btnCreateEvent').addEventListener('click', async ()=>{
+  const institution = document.getElementById('instName').value.trim() || 'Institution';
+  const activity = document.getElementById('actName').value.trim();
+  const date = document.getElementById('actDate').value;
+  const venue = document.getElementById('actVenue').value.trim();
+  const raw = document.getElementById('pList').value.split('\n').map(s=>s.trim()).filter(Boolean);
+  const msg = document.getElementById('setupMsg');
+
+  if(!activity || !date || !venue || raw.length===0){
+    msg.style.color = 'var(--red)';
+    msg.textContent = 'Please fill in Activity, Date, Venue, and at least one participant.';
+    return;
+  }
+
+  let reused = 0, created = 0;
+  const participantIds = raw.map(line=>{
+    const fields = parseParticipantLine(line);
+    if(!fields.name) return null;
+    const before = findPersonByName(fields.name);
+    const id = findOrCreatePerson(fields);
+    if(before) reused++; else created++;
+    return id;
+  }).filter(Boolean);
+
+  const eventId = 'EV'+Date.now().toString(36).toUpperCase();
+  const newEvent = {id:eventId, institution, activity, date, venue, participantIds};
+
+  EVENTS_STORE[eventId] = newEvent;
+  ATTEND_STORE[eventId] = {};
+  ACTIVITY_STORE[eventId] = {};
+  AUDIT_STORE[eventId] = [];
+  ACTIVE_ID = eventId;
+  syncActivePointers();
+
+  await savePeopleStore(); await saveEventsStore(); await saveAttendStore(); await saveActivityStore(); await saveAuditStore(); await saveActiveId();
+
+  msg.style.color = 'var(--ok)';
+  msg.textContent = `"${activity}" created with ${participantIds.length} participants (${reused} reused their existing QR, ${created} new). Event ID: ${eventId}.`;
+  document.getElementById('actName').value=''; document.getElementById('actVenue').value=''; document.getElementById('pList').value='';
+  renderAll();
+  document.querySelector('nav.tabs button[data-tab="idcards"]').click();
+});
+
+// ---------- switching / deleting events ----------
+async function switchEvent(id){
+  if(!EVENTS_STORE[id]) return;
+  stopCamera();
+  ACTIVE_ID = id;
+  syncActivePointers();
+  await saveActiveId();
+  renderAll();
+}
+
+async function deleteEvent(id){
+  const ev = EVENTS_STORE[id];
+  if(!ev) return;
+  if(!confirm(`Delete "${ev.activity}" (${ev.date})? This removes its attendance records and audit log for this event only — people stay in the roster with the same QR. This cannot be undone.`)) return;
+  delete EVENTS_STORE[id];
+  delete ATTEND_STORE[id];
+  delete ACTIVITY_STORE[id];
+  delete AUDIT_STORE[id];
+  if(ACTIVE_ID === id){
+    const ids = Object.keys(EVENTS_STORE);
+    ACTIVE_ID = ids.length ? ids[ids.length-1] : null;
+  }
+  syncActivePointers();
+  await saveEventsStore(); await saveAttendStore(); await saveActivityStore(); await saveAuditStore(); await saveActiveId();
+  renderAll();
+}
+
+// ---------- render ----------
+function renderAll(){
+  renderEventStrip();
+  renderEventList();
+  renderRoster();
+  renderInstLine();
+  renderQrGrid();
+  renderScanSheetPicker();
+  renderMealPicker();
+  renderRecordsSheetPicker();
+  renderRecords();
+}
+
+function renderInstLine(){
+  document.getElementById('instLine').textContent = EVENT ? EVENT.institution : 'Bohol Island State University';
+}
+
+function renderRoster(){
+  const el = document.getElementById('rosterList');
+  const q = (document.getElementById('rosterSearch').value||'').toLowerCase();
+  const people = Object.values(PEOPLE_STORE).filter(p=> p.name.toLowerCase().includes(q)).sort((a,b)=> a.name.localeCompare(b.name));
+  if(people.length===0){ el.innerHTML = '<div class="roster-row"><div class="rn" style="color:var(--muted);">No one in the roster yet — create your first event below.</div></div>'; return; }
+  el.innerHTML = people.map(p=> `<div class="roster-row"><div class="rn">${escapeHtml(p.name)}${p.position?' <span style="color:var(--muted);font-weight:400;">· '+escapeHtml(p.position)+'</span>':''}</div><div class="ri">${p.id}</div></div>`).join('');
+}
+document.getElementById('rosterSearch').addEventListener('input', renderRoster);
+
+function sortedEventIds(){
+  return Object.values(EVENTS_STORE).sort((a,b)=> (a.date<b.date?1:-1)).map(e=>e.id);
+}
+
+function renderEventStrip(){
+  const el = document.getElementById('eventStripHolder');
+  const ids = sortedEventIds();
+  if(!EVENT){
+    el.innerHTML = ids.length ? '' : '<div class="event-strip">No event yet — create one in the Setup tab.</div>';
+    return;
+  }
+  let switcher = '';
+  if(ids.length > 1){
+    switcher = `<div class="switcher"><label style="margin:0;font-size:11.5px;">Active event:</label>
+      <select id="stripSwitcher">
+        ${ids.map(id=>`<option value="${id}" ${id===EVENT.id?'selected':''}>${escapeHtml(EVENTS_STORE[id].activity)} — ${escapeHtml(EVENTS_STORE[id].date)}</option>`).join('')}
+      </select></div>`;
+  }
+  el.innerHTML = `<div class="event-strip">
+    <div><b>Activity:</b> ${escapeHtml(EVENT.activity)}</div>
+    <div><b>Date:</b> ${escapeHtml(EVENT.date)}</div>
+    <div><b>Venue:</b> ${escapeHtml(EVENT.venue)}</div>
+    <div><b>Participants:</b> ${EVENT.participantIds.length}</div>
+    <div class="event-id">ID: ${EVENT.id}</div>
+    ${switcher}
+  </div>`;
+  const sw = document.getElementById('stripSwitcher');
+  if(sw) sw.addEventListener('change', ()=> switchEvent(sw.value));
+}
+
+function renderEventList(){
+  const el = document.getElementById('eventList');
+  const ids = sortedEventIds();
+  if(ids.length===0){ el.innerHTML = '<div class="event-row"><div class="meta"><div class="s">No events yet. Create your first one below.</div></div></div>'; return; }
+  el.innerHTML = ids.map(id=>{
+    const e = EVENTS_STORE[id];
+    const isActive = EVENT && EVENT.id===id;
+    return `<div class="event-row ${isActive?'is-active':''}">
+      <div class="meta">
+        <div class="t">${escapeHtml(e.activity)}</div>
+        <div class="s">${escapeHtml(e.date)} · ${escapeHtml(e.venue)} · ${e.participantIds.length} participants · ID: ${e.id}</div>
+      </div>
+      ${isActive ? '<span class="tag">ACTIVE</span>' : `<button class="btn btn-outline btn-sm" data-switch="${id}">Switch</button>`}
+      <button class="btn btn-danger btn-sm" data-delete="${id}">Delete</button>
+    </div>`;
+  }).join('');
+  el.querySelectorAll('[data-switch]').forEach(b=> b.addEventListener('click', ()=> switchEvent(b.dataset.switch)));
+  el.querySelectorAll('[data-delete]').forEach(b=> b.addEventListener('click', ()=> deleteEvent(b.dataset.delete)));
+}
+
+function qrDataUrlFromBox(qrBox){
+  const canvas = qrBox.querySelector('canvas');
+  if(canvas) return canvas.toDataURL('image/png');
+  const img = qrBox.querySelector('img');
+  if(img && img.src) return img.src;
+  return null;
+}
+function safeFileName(s){ return String(s).replace(/[^a-z0-9]+/gi,'-').replace(/^-+|-+$/g,'').slice(0,60); }
+function downloadDataUrl(dataUrl, filename){
+  const a = document.createElement('a');
+  a.href = dataUrl; a.download = filename;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+}
+
+function renderQrGrid(){
+  const grid = document.getElementById('qrGrid');
+  grid.innerHTML = '';
+  const people = eventPeople();
+  if(!EVENT || people.length===0){ grid.innerHTML = '<div class="hint">Create or switch to an event in Setup first.</div>'; return; }
+  people.forEach(p=>{
+    const card = document.createElement('div');
+    card.className = 'qr-card';
+    const qrBox = document.createElement('div');
+    qrBox.className = 'qrbox';
+    card.appendChild(qrBox);
+    const nm = document.createElement('div');
+    nm.className = 'pname';
+    nm.textContent = p.name;
+    card.appendChild(nm);
+    if(p.position){
+      const sub = document.createElement('div');
+      sub.className = 'psub';
+      sub.textContent = p.position;
+      card.appendChild(sub);
+    }
+    const idl = document.createElement('div');
+    idl.className = 'pid';
+    idl.textContent = p.id;
+    card.appendChild(idl);
+    const dlBtn = document.createElement('button');
+    dlBtn.className = 'qr-dl no-print';
+    dlBtn.textContent = 'Download';
+    dlBtn.addEventListener('click', ()=>{
+      const dataUrl = qrDataUrlFromBox(qrBox);
+      if(dataUrl) downloadDataUrl(dataUrl, `qr-${safeFileName(p.name)}.png`);
+      else alert('Could not read this QR code yet — try again in a moment.');
+    });
+    card.appendChild(dlBtn);
+    grid.appendChild(card);
+    try{ new QRCode(qrBox, {text:p.id, width:110, height:110, correctLevel: QRCode.CorrectLevel.M}); }
+    catch(e){ qrBox.textContent = '(QR failed to render)'; }
+  });
+}
+
+document.getElementById('btnPrintCards').addEventListener('click', ()=>{
+  document.getElementById('screen-idcards').classList.add('print-active');
+  window.print();
+  setTimeout(()=>document.getElementById('screen-idcards').classList.remove('print-active'), 500);
+});
+
+document.getElementById('btnDownloadAllQr').addEventListener('click', async ()=>{
+  const people = eventPeople();
+  if(!EVENT || people.length===0){ alert('Create or switch to an event first.'); return; }
+  const btn = document.getElementById('btnDownloadAllQr');
+  const oldLabel = btn.textContent; btn.textContent = 'Zipping...'; btn.disabled = true;
+  try{
+    const zip = new JSZip();
+    const boxes = document.querySelectorAll('#qrGrid .qrbox');
+    people.forEach((p, i)=>{
+      const box = boxes[i];
+      if(!box) return;
+      const dataUrl = qrDataUrlFromBox(box);
+      if(!dataUrl) return;
+      const base64 = dataUrl.split(',')[1];
+      zip.file(`qr-${safeFileName(p.name)}.png`, base64, {base64:true});
+    });
+    const blob = await zip.generateAsync({type:'blob'});
+    const url = URL.createObjectURL(blob);
+    downloadDataUrl(url, `qr-codes-${EVENT.id}.zip`);
+    URL.revokeObjectURL(url);
+  }catch(e){
+    console.error(e);
+    alert('Could not build the zip file. Please try again.');
+  }finally{
+    btn.textContent = oldLabel; btn.disabled = false;
+  }
+});
+
+// ---------- sheet pickers ----------
+function renderScanSheetPicker(){
+  const wrap = document.getElementById('scanSheetPicker');
+  wrap.innerHTML = '';
+  [['activity','Activity Attendance'], ['food','Food Provision']].forEach(([key,label])=>{
+    const b = document.createElement('button');
+    b.textContent = label;
+    if(key===scanSheet) b.classList.add('active');
+    b.addEventListener('click', ()=>{
+      scanSheet = key;
+      renderScanSheetPicker();
+      document.getElementById('mealPickerWrap').style.display = (key==='food') ? 'block' : 'none';
+    });
+    wrap.appendChild(b);
+  });
+  document.getElementById('mealPickerWrap').style.display = (scanSheet==='food') ? 'block' : 'none';
+}
+
+function renderRecordsSheetPicker(){
+  const wrap = document.getElementById('recordsSheetPicker');
+  wrap.innerHTML = '';
+  [['food','Food Provision'], ['activity','Activity Attendance']].forEach(([key,label])=>{
+    const b = document.createElement('button');
+    b.textContent = label;
+    if(key===recordsSheet) b.classList.add('active');
+    b.addEventListener('click', ()=>{ recordsSheet = key; renderRecordsSheetPicker(); renderRecords(); });
+    wrap.appendChild(b);
+  });
+}
+
+function renderMealPicker(){
+  const wrap = document.getElementById('mealPicker');
+  wrap.innerHTML = '';
+  MEALS.forEach(m=>{
+    const b = document.createElement('button');
+    b.textContent = m.label;
+    if(m.key===activeMeal) b.classList.add('active');
+    b.addEventListener('click', ()=>{ activeMeal = m.key; renderMealPicker(); });
+    wrap.appendChild(b);
+  });
+}
+
+// ---------- camera scanning ----------
+document.getElementById('btnCamStart').addEventListener('click', startCamera);
+document.getElementById('btnCamStop').addEventListener('click', stopCamera);
+
+async function startCamera(){
+  const status = document.getElementById('camStatus');
+  if(!EVENT){ status.textContent = 'Create or switch to an event first.'; return; }
+  try{
+    camStream = await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}});
+    const video = document.getElementById('video');
+    video.srcObject = camStream;
+    await video.play();
+    document.getElementById('btnCamStart').style.display='none';
+    document.getElementById('btnCamStop').style.display='inline-block';
+    status.textContent = 'Camera on — point a QR code inside the frame.';
+    scanLoop();
+  }catch(e){
+    status.textContent = 'Camera unavailable on this device/browser. Use the Records tab to check people in manually instead.';
+  }
+}
+
+function stopCamera(){
+  if(scanLoopId) cancelAnimationFrame(scanLoopId);
+  if(camStream){ camStream.getTracks().forEach(t=>t.stop()); camStream=null; }
+  document.getElementById('btnCamStart').style.display='inline-block';
+  document.getElementById('btnCamStop').style.display='none';
+  document.getElementById('camStatus').textContent = 'Camera is off.';
+}
+
+function scanLoop(){
+  const video = document.getElementById('video');
+  const canvas = document.getElementById('canvas');
+  const ctx = canvas.getContext('2d', {willReadFrequently:true});
+  function tick(){
+    if(video.readyState === video.HAVE_ENOUGH_DATA){
+      canvas.width = video.videoWidth; canvas.height = video.videoHeight;
+      ctx.drawImage(video,0,0,canvas.width,canvas.height);
+      const img = ctx.getImageData(0,0,canvas.width,canvas.height);
+      const code = jsQR(img.data, img.width, img.height);
+      if(code && code.data){
+        handleScanResult(code.data);
+      }
+    }
+    scanLoopId = requestAnimationFrame(tick);
+  }
+  scanLoopId = requestAnimationFrame(tick);
+}
+
+function handleScanResult(pid){
+  if(isSigning) return;
+  const now = Date.now();
+  if(pid === lastScan.code && (now - lastScan.at) < 2500) return;
+  lastScan = {code:pid, at:now};
+  if(scanSheet === 'activity') markActivityCheckin(pid, 'QR scan');
+  else markAttendance(pid, activeMeal, 'QR scan');
+}
+
+// ---------- food provision marking (with e-signature) ----------
+async function markAttendance(pid, mealKey, method){
+  const flash = document.getElementById('scanFlash');
+  if(!EVENT){ return; }
+  const p = await ensureEnrolled(pid);
+  const mealLabel = MEALS.find(m=>m.key===mealKey).label;
+  if(!p){
+    if(flash){ flash.className='err'; flash.textContent = 'QR not recognized in the system.'; }
+    return;
+  }
+  ATTEND[pid] = ATTEND[pid] || {};
+  if(ATTEND[pid][mealKey]){
+    if(flash){ flash.className='warn'; flash.textContent = `${p.name} was already recorded for ${mealLabel} at ${fmtTime(ATTEND[pid][mealKey].time)}.`; }
+    addRecent(p.name, mealLabel, 'already recorded');
+    return;
+  }
+  isSigning = true;
+  const sig = await openSigModal(p.name, `Sign to confirm ${mealLabel}`);
+  isSigning = false;
+  if(!sig){
+    if(flash){ flash.className='warn'; flash.textContent = 'Signature cancelled — not recorded.'; }
+    return;
+  }
+  const ts = new Date().toISOString();
+  ATTEND[pid][mealKey] = {time:ts, sig};
+  AUDIT.push({time:ts, pid, name:p.name, meal:mealLabel, action:'checked in', method: method||'manual', type:'food'});
+  ATTEND_STORE[EVENT.id] = ATTEND; AUDIT_STORE[EVENT.id] = AUDIT;
+  await saveAttendStore(); await saveAuditStore();
+  if(flash){ flash.className='ok'; flash.textContent = `✓ ${p.name} signed for ${mealLabel} at ${fmtTime(ts)}.`; }
+  addRecent(p.name, mealLabel, 'recorded');
+  renderRecords();
+}
+
+async function unmarkAttendance(pid, mealKey){
+  const p = PEOPLE_STORE[pid];
+  const mealLabel = MEALS.find(m=>m.key===mealKey).label;
+  if(!confirm(`Remove ${mealLabel} record for ${p.name}?`)) return;
+  const ts = new Date().toISOString();
+  delete ATTEND[pid][mealKey];
+  AUDIT.push({time:ts, pid, name:p.name, meal:mealLabel, action:'removed', method:'manual correction', type:'food'});
+  ATTEND_STORE[EVENT.id] = ATTEND; AUDIT_STORE[EVENT.id] = AUDIT;
+  await saveAttendStore(); await saveAuditStore();
+  renderRecords();
+}
+
+// ---------- activity attendance marking (with e-signature) ----------
+async function markActivityCheckin(pid, method){
+  const flash = document.getElementById('scanFlash');
+  if(!EVENT){ return; }
+  const p = await ensureEnrolled(pid);
+  if(!p){
+    if(flash){ flash.className='err'; flash.textContent = 'QR not recognized in the system.'; }
+    return;
+  }
+  if(ACTIVITY[pid]){
+    if(flash){ flash.className='warn'; flash.textContent = `${p.name} was already recorded present at ${fmtTime(ACTIVITY[pid].time)}.`; }
+    addRecent(p.name, 'Activity Attendance', 'already recorded');
+    return;
+  }
+  isSigning = true;
+  const sig = await openSigModal(p.name, 'Sign to confirm attendance');
+  isSigning = false;
+  if(!sig){
+    if(flash){ flash.className='warn'; flash.textContent = 'Signature cancelled — not recorded.'; }
+    return;
+  }
+  const ts = new Date().toISOString();
+  ACTIVITY[pid] = {time:ts, sig};
+  AUDIT.push({time:ts, pid, name:p.name, meal:'Activity Attendance', action:'checked in', method: method||'manual', type:'activity'});
+  ACTIVITY_STORE[EVENT.id] = ACTIVITY; AUDIT_STORE[EVENT.id] = AUDIT;
+  await saveActivityStore(); await saveAuditStore();
+  if(flash){ flash.className='ok'; flash.textContent = `✓ ${p.name} signed in at ${fmtTime(ts)}.`; }
+  addRecent(p.name, 'Activity Attendance', 'recorded');
+  renderRecords();
+}
+
+async function unmarkActivityCheckin(pid){
+  const p = PEOPLE_STORE[pid];
+  if(!confirm(`Remove Activity Attendance record for ${p.name}?`)) return;
+  const ts = new Date().toISOString();
+  delete ACTIVITY[pid];
+  AUDIT.push({time:ts, pid, name:p.name, meal:'Activity Attendance', action:'removed', method:'manual correction', type:'activity'});
+  ACTIVITY_STORE[EVENT.id] = ACTIVITY; AUDIT_STORE[EVENT.id] = AUDIT;
+  await saveActivityStore(); await saveAuditStore();
+  renderRecords();
+}
+
+function addRecent(name, meal, kind){
+  const list = document.getElementById('recentList');
+  const li = document.createElement('li');
+  const time = new Date().toLocaleTimeString();
+  li.innerHTML = kind==='recorded'
+    ? `<b>${escapeHtml(name)}</b> — ${escapeHtml(meal)} · ${time}`
+    : `<b>${escapeHtml(name)}</b> — ${escapeHtml(meal)} already recorded · ${time}`;
+  list.prepend(li);
+  while(list.children.length>10) list.removeChild(list.lastChild);
+}
+
+function fmtTime(iso){
+  return new Date(iso).toLocaleString([], {month:'short', day:'numeric', hour:'2-digit', minute:'2-digit'});
+}
+
+// ---------- records table ----------
+function renderRecords(){
+  const table = document.getElementById('recTable');
+  const people = eventPeople();
+  if(!EVENT){ table.innerHTML = '<tr><td style="border:none;">Create or switch to an event first.</td></tr>'; return; }
+  const q = (document.getElementById('recSearch').value||'').toLowerCase();
+  const rows = people.filter(p=>p.name.toLowerCase().includes(q));
+
+  if(recordsSheet === 'food'){
+    let html = '<tr><th style="text-align:left;">Name</th>' + MEALS.map(m=>`<th>${m.label}</th>`).join('') + '</tr>';
+    rows.forEach(p=>{
+      html += `<tr><td class="name">${escapeHtml(p.name)}</td>`;
+      MEALS.forEach(m=>{
+        const entry = ATTEND[p.id] && ATTEND[p.id][m.key];
+        html += entry
+          ? `<td class="cell present" data-pid="${p.id}" data-meal="${m.key}"><img class="sig-thumb" src="${entry.sig}" alt="signature"></td>`
+          : `<td class="cell" data-pid="${p.id}" data-meal="${m.key}">—</td>`;
+      });
+      html += '</tr>';
+    });
+    table.innerHTML = html;
+    table.querySelectorAll('td.cell').forEach(td=>{
+      td.addEventListener('click', ()=>{
+        const pid = td.dataset.pid, meal = td.dataset.meal;
+        if(td.classList.contains('present')) unmarkAttendance(pid, meal);
+        else markAttendance(pid, meal, 'manual');
+      });
+    });
+  } else {
+    let html = `<tr><th style="text-align:left;">Name</th><th>Sex</th><th>Position/Designation</th><th>Campus/Agency</th><th>Contact No.</th><th>Email Address</th><th>Time In</th><th>Signature</th></tr>`;
+    rows.forEach(p=>{
+      const entry = ACTIVITY[p.id];
+      html += `<tr>
+        <td class="name">${escapeHtml(p.name)}</td>
+        <td>${escapeHtml(p.sex||'')}</td>
+        <td>${escapeHtml(p.position||'')}</td>
+        <td>${escapeHtml(p.campus||'')}</td>
+        <td>${escapeHtml(p.contact||'')}</td>
+        <td>${escapeHtml(p.email||'')}</td>
+        <td class="cell ${entry?'present':''}" data-pid="${p.id}">${entry? fmtTime(entry.time) : '—'}</td>
+        <td>${entry ? `<img class="sig-thumb" src="${entry.sig}" alt="signature">` : '<span class="static">sign after printing</span>'}</td>
+      </tr>`;
+    });
+    table.innerHTML = html;
+    table.querySelectorAll('td.cell').forEach(td=>{
+      td.addEventListener('click', ()=>{
+        const pid = td.dataset.pid;
+        if(td.classList.contains('present')) unmarkActivityCheckin(pid);
+        else markActivityCheckin(pid, 'manual');
+      });
+    });
+  }
+}
+document.getElementById('recSearch').addEventListener('input', renderRecords);
+
+// ---------- shared Excel/PDF helpers ----------
+const THIN_BORDER = {top:{style:'thin'},left:{style:'thin'},bottom:{style:'thin'},right:{style:'thin'}};
+function borderCell(cell){ cell.border = THIN_BORDER; }
+
+function embedSignature(wb, ws, dataUrl, col1, row1, w, h){
+  if(!dataUrl) return;
+  try{
+    const base64 = dataUrl.split(',')[1];
+    const imgId = wb.addImage({base64, extension:'png'});
+    ws.addImage(imgId, { tl:{col:col1-1+0.08, row:row1-1+0.1}, ext:{width:w||78, height:h||20} });
+  }catch(e){ console.error('signature embed failed', e); }
+}
+
+function addTitleBlock(ws, totalCols, title){
+  let r = 1;
+  ws.mergeCells(r,1,r,totalCols);
+  ws.getCell(r,1).value = 'Republic of the Philippines';
+  ws.getCell(r,1).alignment = {horizontal:'center'};
+  r++;
+  ws.mergeCells(r,1,r,totalCols);
+  ws.getCell(r,1).value = EVENT.institution;
+  ws.getCell(r,1).font = {bold:true, size:13};
+  ws.getCell(r,1).alignment = {horizontal:'center'};
+  r++;
+  ws.mergeCells(r,1,r,totalCols);
+  ws.getCell(r,1).value = title;
+  ws.getCell(r,1).font = {bold:true, size:12};
+  ws.getCell(r,1).alignment = {horizontal:'center'};
+  r += 2;
+  const infoRows = [['Event ID:', EVENT.id], ['Activity:', EVENT.activity], ['Date:', EVENT.date], ['Venue:', EVENT.venue]];
+  infoRows.forEach(([label, value])=>{
+    ws.getCell(r,1).value = label;
+    ws.getCell(r,1).font = {bold:true};
+    ws.mergeCells(r,2,r,totalCols);
+    ws.getCell(r,2).value = value;
+    r++;
+  });
+  r++;
+  return r;
+}
+
+function addSignatureFooter(ws, totalCols, r){
+  ws.getCell(r,1).value = 'Prepared by:'; ws.getCell(r,1).font = {bold:true};
+  const midCol = Math.max(4, Math.floor(totalCols/2)+1);
+  ws.getCell(r,midCol).value = 'Checked by:'; ws.getCell(r,midCol).font = {bold:true};
+  ws.getCell(r,totalCols).value = 'Approved by:'; ws.getCell(r,totalCols).font = {bold:true};
+  r++;
+  ws.getCell(r,1).value = '________________________';
+  ws.getCell(r,midCol).value = '________________________';
+  ws.getCell(r,totalCols).value = '________________________';
+  r += 2;
+  ws.getCell(r,1).value = 'Generated for COA audit on ' + new Date().toLocaleString();
+  ws.getCell(r,1).font = {italic:true, size:9, color:{argb:'FF5B6472'}};
+  return r;
+}
+
+function addAuditSheet(wb, auditRows){
+  const auditWs = wb.addWorksheet('Audit Log');
+  auditWs.columns = [
+    {header:'Time', key:'time', width:22},
+    {header:'Name', key:'name', width:28},
+    {header:'Meal / Sheet', key:'meal', width:18},
+    {header:'Action', key:'action', width:14},
+    {header:'Method', key:'method', width:16}
+  ];
+  auditWs.getRow(1).eachCell(c=>{
+    c.font = {bold:true, color:{argb:'FFFFFFFF'}};
+    c.fill = {type:'pattern', pattern:'solid', fgColor:{argb:'FF0B2545'}};
+    c.alignment = {horizontal:'center', vertical:'middle'};
+    borderCell(c);
+  });
+  auditRows.forEach(a=>{
+    auditWs.addRow({time:fmtTime(a.time), name:a.name, meal:a.meal, action:a.action, method:a.method});
+  });
+  auditWs.eachRow((row, idx)=>{ if(idx>1) row.eachCell(c=>{ borderCell(c); c.alignment = {vertical:'middle'}; }); });
+}
+
+async function downloadWorkbook(wb, filename){
+  const buf = await wb.xlsx.writeBuffer();
+  const blob = new Blob([buf], {type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function pdfHeaderBlock(doc, title){
+  let y = 40;
+  doc.setFont('helvetica','normal'); doc.setFontSize(10);
+  doc.text('Republic of the Philippines', 40, y); y+=14;
+  doc.setFont('helvetica','bold'); doc.setFontSize(13);
+  doc.text(EVENT.institution, 40, y); y+=16;
+  doc.setFontSize(12);
+  doc.text(title, 40, y); y+=18;
+  doc.setFont('helvetica','normal'); doc.setFontSize(10);
+  doc.text(`Event ID: ${EVENT.id}`, 40, y); y+=14;
+  doc.text(`Activity: ${EVENT.activity}`, 40, y); y+=14;
+  doc.text(`Date: ${EVENT.date}`, 40, y); y+=14;
+  doc.text(`Venue: ${EVENT.venue}`, 40, y); y+=10;
+  return y;
+}
+
+function pdfSignatureFooter(doc, y){
+  doc.setFontSize(9);
+  doc.text('Prepared by: ______________________', 40, y);
+  doc.text('Checked by: ______________________', 300, y);
+  doc.text('Approved by: ______________________', 560, y);
+  y += 20;
+  doc.setFontSize(8);
+  doc.text('Generated for COA audit on ' + new Date().toLocaleString(), 40, y);
+}
+
+function pdfAuditPage(doc, auditRows){
+  doc.addPage('a4','landscape');
+  doc.setFontSize(12); doc.setFont('helvetica','bold');
+  doc.text('Audit Log', 40, 40);
+  doc.autoTable({
+    startY: 55,
+    head: [['Time','Name','Meal / Sheet','Action','Method']],
+    body: auditRows.map(a=>[fmtTime(a.time), a.name, a.meal, a.action, a.method]),
+    styles:{fontSize:8, cellPadding:4},
+    headStyles:{fillColor:[11,37,69]},
+    margin:{left:40, right:40}
+  });
+}
+
+// ---------- export: Food Provision ----------
+document.getElementById('btnExportXlsx').addEventListener('click', async ()=>{
+  if(!EVENT){ alert('Create or switch to an event first.'); return; }
+  const btn = document.getElementById('btnExportXlsx');
+  const oldLabel = btn.textContent; btn.textContent = 'Preparing...'; btn.disabled = true;
+  try{
+    const people = eventPeople();
+    const wb = new ExcelJS.Workbook();
+    const totalCols = 2 + MEALS.length;
+    const ws = wb.addWorksheet('Attendance');
+    ws.columns = [{width:5},{width:28}, ...MEALS.map(()=>({width:14}))];
+    let r = addTitleBlock(ws, totalCols, 'ATTENDANCE SHEET FOR FOOD PROVISION');
+
+    const headers = ['No.','Name', ...MEALS.map(m=>m.label)];
+    headers.forEach((h,i)=>{
+      const c = ws.getCell(r, i+1);
+      c.value = h;
+      c.font = {bold:true, color:{argb:'FFFFFFFF'}};
+      c.alignment = {horizontal:'center', vertical:'middle', wrapText:true};
+      c.fill = {type:'pattern', pattern:'solid', fgColor:{argb:'FF0B2545'}};
+      borderCell(c);
+    });
+    r++;
+
+    people.forEach((p,i)=>{
+      const rowVals = [i+1, p.name, ...MEALS.map(()=> '')];
+      rowVals.forEach((v,ci)=>{
+        const c = ws.getCell(r, ci+1);
+        c.value = v;
+        c.alignment = {horizontal: ci===1 ? 'left' : 'center', vertical:'middle'};
+        borderCell(c);
+      });
+      MEALS.forEach((m, mi)=>{
+        const entry = ATTEND[p.id] && ATTEND[p.id][m.key];
+        if(entry) embedSignature(wb, ws, entry.sig, 3+mi, r);
+      });
+      ws.getRow(r).height = 22;
+      r++;
+    });
+    r += 2;
+    addSignatureFooter(ws, totalCols, r);
+
+    addAuditSheet(wb, AUDIT.filter(a=> (a.type||'food')==='food'));
+    await downloadWorkbook(wb, `food-provision-${EVENT.id}-${EVENT.date}.xlsx`);
+  }catch(e){
+    console.error(e);
+    alert('Could not generate the Excel file. Please try again.');
+  }finally{
+    btn.textContent = oldLabel; btn.disabled = false;
+  }
+});
+
+document.getElementById('btnExportPdf').addEventListener('click', ()=>{
+  if(!EVENT){ alert('Create or switch to an event first.'); return; }
+  const people = eventPeople();
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({orientation:'landscape', unit:'pt', format:'a4'});
+  const y = pdfHeaderBlock(doc, 'ATTENDANCE SHEET FOR FOOD PROVISION');
+
+  const body = people.map((p,i)=> [i+1, p.name, ...MEALS.map(()=> '')]);
+
+  doc.autoTable({
+    startY: y+8,
+    head: [['No.','Name', ...MEALS.map(m=>m.label)]],
+    body: body,
+    styles:{fontSize:8, cellPadding:4, minCellHeight:22},
+    headStyles:{fillColor:[11,37,69]},
+    margin:{left:40, right:40},
+    didDrawCell: (data)=>{
+      if(data.section==='body' && data.column.index>=2){
+        const mi = data.column.index - 2;
+        const m = MEALS[mi];
+        const p = people[data.row.index];
+        const entry = p && ATTEND[p.id] && ATTEND[p.id][m.key];
+        if(entry && entry.sig){
+          try{
+            const w = Math.min(data.cell.width-6, 60);
+            const h = Math.min(data.cell.height-6, 16);
+            doc.addImage(entry.sig, 'PNG', data.cell.x+3, data.cell.y+(data.cell.height-h)/2, w, h);
+          }catch(err){ console.error(err); }
+        }
+      }
+    }
+  });
+
+  pdfSignatureFooter(doc, doc.lastAutoTable.finalY + 30);
+  pdfAuditPage(doc, AUDIT.filter(a=> (a.type||'food')==='food'));
+  doc.save(`food-provision-${EVENT.id}-${EVENT.date}.pdf`);
+});
+
+// ---------- export: Activity Attendance ----------
+document.getElementById('btnExportActivityXlsx').addEventListener('click', async ()=>{
+  if(!EVENT){ alert('Create or switch to an event first.'); return; }
+  const btn = document.getElementById('btnExportActivityXlsx');
+  const oldLabel = btn.textContent; btn.textContent = 'Preparing...'; btn.disabled = true;
+  try{
+    const people = eventPeople();
+    const wb = new ExcelJS.Workbook();
+    const cols = ['No.','Name','Sex','Position/Designation','Campus/Agency','Contact No.','Email Address','Time In','Signature'];
+    const totalCols = cols.length;
+    const ws = wb.addWorksheet('Attendance');
+    ws.columns = [{width:5},{width:24},{width:6},{width:20},{width:16},{width:14},{width:24},{width:16},{width:22}];
+    let r = addTitleBlock(ws, totalCols, 'ATTENDANCE SHEET');
+
+    cols.forEach((h,i)=>{
+      const c = ws.getCell(r, i+1);
+      c.value = h;
+      c.font = {bold:true, color:{argb:'FFFFFFFF'}};
+      c.alignment = {horizontal:'center', vertical:'middle', wrapText:true};
+      c.fill = {type:'pattern', pattern:'solid', fgColor:{argb:'FF0B2545'}};
+      borderCell(c);
+    });
+    r++;
+
+    people.forEach((p,i)=>{
+      const entry = ACTIVITY[p.id];
+      const rowVals = [i+1, p.name, p.sex||'', p.position||'', p.campus||'', p.contact||'', p.email||'', entry?fmtTime(entry.time):'', ''];
+      rowVals.forEach((v,ci)=>{
+        const c = ws.getCell(r, ci+1);
+        c.value = v;
+        c.alignment = {horizontal: (ci===1||ci===3||ci===4||ci===6) ? 'left' : 'center', vertical:'middle'};
+        borderCell(c);
+      });
+      if(entry) embedSignature(wb, ws, entry.sig, 9, r, 92, 20);
+      ws.getRow(r).height = 22;
+      r++;
+    });
+    r += 2;
+    addSignatureFooter(ws, totalCols, r);
+
+    addAuditSheet(wb, AUDIT.filter(a=> a.type==='activity'));
+    await downloadWorkbook(wb, `activity-attendance-${EVENT.id}-${EVENT.date}.xlsx`);
+  }catch(e){
+    console.error(e);
+    alert('Could not generate the Excel file. Please try again.');
+  }finally{
+    btn.textContent = oldLabel; btn.disabled = false;
+  }
+});
+
+document.getElementById('btnExportActivityPdf').addEventListener('click', ()=>{
+  if(!EVENT){ alert('Create or switch to an event first.'); return; }
+  const people = eventPeople();
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({orientation:'landscape', unit:'pt', format:'a4'});
+  const y = pdfHeaderBlock(doc, 'ATTENDANCE SHEET');
+
+  const body = people.map((p,i)=>{
+    const entry = ACTIVITY[p.id];
+    return [i+1, p.name, p.sex||'', p.position||'', p.campus||'', p.contact||'', p.email||'', entry?fmtTime(entry.time):'', ''];
+  });
+
+  doc.autoTable({
+    startY: y+8,
+    head: [['No.','Name','Sex','Position/Designation','Campus/Agency','Contact No.','Email Address','Time In','Signature']],
+    body: body,
+    styles:{fontSize:7.5, cellPadding:3.5, minCellHeight:22},
+    headStyles:{fillColor:[11,37,69]},
+    margin:{left:40, right:40},
+    didDrawCell: (data)=>{
+      if(data.section==='body' && data.column.index===8){
+        const p = people[data.row.index];
+        const entry = p && ACTIVITY[p.id];
+        if(entry && entry.sig){
+          try{
+            const w = Math.min(data.cell.width-6, 70);
+            const h = Math.min(data.cell.height-6, 16);
+            doc.addImage(entry.sig, 'PNG', data.cell.x+3, data.cell.y+(data.cell.height-h)/2, w, h);
+          }catch(err){ console.error(err); }
+        }
+      }
+    }
+  });
+
+  pdfSignatureFooter(doc, doc.lastAutoTable.finalY + 30);
+  pdfAuditPage(doc, AUDIT.filter(a=> a.type==='activity'));
+  doc.save(`activity-attendance-${EVENT.id}-${EVENT.date}.pdf`);
+});
+
+// ---------- utils ----------
+function escapeHtml(s){
+  return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+loadAll();
+</script>
+</body>
+</html>
